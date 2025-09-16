@@ -109,7 +109,18 @@ class DirectoryTreeApp:
             'dist',
             'target',
             '.DS_Store',
-            'Thumbs.db'
+            'Thumbs.db',
+            # Common file extensions to ignore
+            '.pyc',
+            '.pyo',
+            '.pyd',
+            '.log',
+            '.tmp',
+            '.temp',
+            '.cache',
+            '.bak',
+            '.swp',
+            '.swo'
         ]
         self.ignored_folders.update(common_patterns)
         
@@ -491,7 +502,7 @@ class DirectoryTreeApp:
                 
                 # Process files in this directory
                 if show_option in ["both", "files"]:
-                    # Filter files based on hidden files option
+                    # Filter files based on hidden files option and ignore patterns
                     filtered_files = []
                     for file_name in files:
                         should_ignore = False
@@ -499,6 +510,22 @@ class DirectoryTreeApp:
                         # Check if file is hidden (starts with dot)
                         if ignore_hidden and file_name.startswith('.'):
                             should_ignore = True
+                        
+                        # Check if file matches any ignore pattern
+                        if not should_ignore:
+                            for pattern in ignored_folders:
+                                # Check if file name matches the pattern exactly
+                                if file_name == pattern:
+                                    should_ignore = True
+                                    break
+                                # Check if file extension matches the pattern
+                                if pattern.startswith('.') and file_name.endswith(pattern):
+                                    should_ignore = True
+                                    break
+                                # Check if file name contains the pattern (for partial matches)
+                                if pattern in file_name:
+                                    should_ignore = True
+                                    break
                         
                         if not should_ignore:
                             filtered_files.append(file_name)
