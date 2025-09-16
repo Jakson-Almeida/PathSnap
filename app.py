@@ -6,6 +6,53 @@ import threading
 from typing import Optional, List, Tuple
 from pathlib import Path
 
+# Configure ttk styles
+def configure_styles():
+    """Configure modern ttk styles for a beautiful UI."""
+    style = ttk.Style()
+    
+    # Set theme
+    style.theme_use('clam')
+    
+    # Configure main window colors
+    style.configure('Title.TLabel', 
+                   font=('TkDefaultFont', 12, 'bold'))
+    
+    # Configure section headers
+    style.configure('Section.TLabel', 
+                   font=('TkDefaultFont', 10, 'bold'))
+    
+    # Configure buttons
+    style.configure('Primary.TButton',
+                   font=('TkDefaultFont', 9, 'bold'),
+                   padding=(12, 8))
+    
+    style.configure('Secondary.TButton',
+                   font=('TkDefaultFont', 9),
+                   padding=(8, 6))
+    
+    style.configure('Danger.TButton',
+                   font=('TkDefaultFont', 9),
+                   padding=(8, 6))
+    
+    # Configure entry fields
+    style.configure('Modern.TEntry',
+                   font=('TkDefaultFont', 9),
+                   padding=(8, 6))
+    
+    # Configure progress bar
+    style.configure('Modern.Horizontal.TProgressbar',
+                   background='#3498db',
+                   troughcolor='#ecf0f1')
+    
+    # Configure label frames
+    style.configure('Card.TLabelframe',
+                   relief='solid',
+                   borderwidth=1)
+    
+    style.configure('Card.TLabelframe.Label',
+                   font=('TkDefaultFont', 10, 'bold'))
+
 class DirectoryTreeApp:
     """
     A GUI application for exploring directory structures with tree visualization.
@@ -24,8 +71,11 @@ class DirectoryTreeApp:
         """Initialize the application."""
         self.root = root
         self.root.title("PathSnap - Directory Tree Explorer")
-        self.root.geometry("900x700")
-        self.root.minsize(600, 400)
+        self.root.geometry("1000x750")
+        self.root.minsize(800, 600)
+        
+        # Configure modern styling
+        configure_styles()
         
         # Threading control
         self.stop_event = threading.Event()
@@ -69,140 +119,197 @@ class DirectoryTreeApp:
         
     def setup_ui(self) -> None:
         """Set up the user interface."""
-        # Main frame
-        main_frame = ttk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # Main container with padding
+        main_container = ttk.Frame(self.root)
+        main_container.pack(fill=tk.BOTH, expand=True, padx=15, pady=15)
         
-        # Directory selection frame
-        dir_frame = ttk.LabelFrame(main_frame, text="Directory Selection", padding=5)
-        dir_frame.pack(fill=tk.X, pady=(0, 10))
+        # Title section
+        title_frame = ttk.Frame(main_container)
+        title_frame.pack(fill=tk.X, pady=(0, 20))
         
-        ttk.Label(dir_frame, text="Directory:").pack(side=tk.LEFT)
-        self.dir_entry = ttk.Entry(dir_frame, width=50)
-        self.dir_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        title_label = ttk.Label(title_frame, text="PathSnap", style='Title.TLabel')
+        title_label.pack(side=tk.LEFT)
+        
+        subtitle_label = ttk.Label(title_frame, text="Directory Tree Explorer", 
+                                  font=('TkDefaultFont', 9), foreground='#7f8c8d')
+        subtitle_label.pack(side=tk.LEFT, padx=(10, 0))
+        
+        # Directory selection card
+        dir_card = ttk.LabelFrame(main_container, text="Directory Selection", 
+                                 style='Card.TLabelframe', padding=15)
+        dir_card.pack(fill=tk.X, pady=(0, 15))
+        
+        # Directory input row
+        dir_input_frame = ttk.Frame(dir_card)
+        dir_input_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        ttk.Label(dir_input_frame, text="Directory Path:", style='Section.TLabel').pack(anchor=tk.W)
+        
+        dir_entry_frame = ttk.Frame(dir_input_frame)
+        dir_entry_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        self.dir_entry = ttk.Entry(dir_entry_frame, style='Modern.TEntry')
+        self.dir_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         self.dir_entry.insert(0, os.path.expanduser("~"))
         
-        browse_btn = ttk.Button(dir_frame, text="Browse", command=self.browse_directory)
-        browse_btn.pack(side=tk.LEFT, padx=5)
+        browse_btn = ttk.Button(dir_entry_frame, text="Browse", 
+                               command=self.browse_directory, style='Secondary.TButton')
+        browse_btn.pack(side=tk.RIGHT)
         
-        # Options frame
-        opt_frame = ttk.LabelFrame(main_frame, text="Options", padding=5)
-        opt_frame.pack(fill=tk.X, pady=(0, 10))
+        # Options and controls card
+        options_card = ttk.LabelFrame(main_container, text="Options & Controls", 
+                                     style='Card.TLabelframe', padding=15)
+        options_card.pack(fill=tk.X, pady=(0, 15))
+        
+        # Options row
+        options_row = ttk.Frame(options_card)
+        options_row.pack(fill=tk.X, pady=(0, 15))
         
         # Depth control
-        depth_frame = ttk.Frame(opt_frame)
-        depth_frame.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        depth_frame = ttk.Frame(options_row)
+        depth_frame.pack(side=tk.LEFT, padx=(0, 30))
         
-        ttk.Label(depth_frame, text="Max Depth:").pack(side=tk.LEFT)
-        self.depth_entry = ttk.Entry(depth_frame, width=8)
-        self.depth_entry.pack(side=tk.LEFT, padx=5)
+        ttk.Label(depth_frame, text="Max Depth:", style='Section.TLabel').pack(anchor=tk.W)
+        self.depth_entry = ttk.Entry(depth_frame, style='Modern.TEntry', width=8)
+        self.depth_entry.pack(side=tk.LEFT, pady=(5, 0))
         self.depth_entry.insert(0, "-1")
         
         # Show options
-        show_frame = ttk.Frame(opt_frame)
-        show_frame.pack(side=tk.LEFT, padx=(20, 0))
+        show_frame = ttk.Frame(options_row)
+        show_frame.pack(side=tk.LEFT, padx=(0, 30))
         
-        ttk.Label(show_frame, text="Show:").pack(side=tk.LEFT)
+        ttk.Label(show_frame, text="Display:", style='Section.TLabel').pack(anchor=tk.W)
         self.show_option = tk.StringVar(value="both")
-        ttk.Radiobutton(show_frame, text="Both", variable=self.show_option, value="both").pack(side=tk.LEFT, padx=2)
-        ttk.Radiobutton(show_frame, text="Folders", variable=self.show_option, value="folders").pack(side=tk.LEFT, padx=2)
-        ttk.Radiobutton(show_frame, text="Files", variable=self.show_option, value="files").pack(side=tk.LEFT, padx=2)
+        
+        radio_frame = ttk.Frame(show_frame)
+        radio_frame.pack(side=tk.LEFT, pady=(5, 0))
+        
+        ttk.Radiobutton(radio_frame, text="Both", variable=self.show_option, value="both").pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Radiobutton(radio_frame, text="Folders", variable=self.show_option, value="folders").pack(side=tk.LEFT, padx=(0, 10))
+        ttk.Radiobutton(radio_frame, text="Files", variable=self.show_option, value="files").pack(side=tk.LEFT)
         
         # Control buttons
-        btn_frame = ttk.Frame(opt_frame)
-        btn_frame.pack(side=tk.RIGHT)
+        btn_frame = ttk.Frame(options_card)
+        btn_frame.pack(fill=tk.X)
         
-        self.search_btn = ttk.Button(btn_frame, text="Generate Tree", command=self.toggle_search)
-        self.search_btn.pack(side=tk.LEFT, padx=2)
+        self.search_btn = ttk.Button(btn_frame, text="Generate Tree", 
+                                    command=self.toggle_search, style='Primary.TButton')
+        self.search_btn.pack(side=tk.LEFT, padx=(0, 10))
         
-        clear_btn = ttk.Button(btn_frame, text="Clear", command=self.clear_results)
-        clear_btn.pack(side=tk.LEFT, padx=2)
+        clear_btn = ttk.Button(btn_frame, text="Clear", 
+                              command=self.clear_results, style='Secondary.TButton')
+        clear_btn.pack(side=tk.LEFT)
         
-        # Ignore folders frame
-        ignore_frame = ttk.LabelFrame(main_frame, text="Ignore Folders", padding=5)
-        ignore_frame.pack(fill=tk.X, pady=(0, 10))
+        # Ignore folders card
+        ignore_card = ttk.LabelFrame(main_container, text="Ignore Folders", 
+                                    style='Card.TLabelframe', padding=15)
+        ignore_card.pack(fill=tk.X, pady=(0, 15))
         
-        # Ignore folder input
-        ignore_input_frame = ttk.Frame(ignore_frame)
-        ignore_input_frame.pack(fill=tk.X, pady=(0, 5))
+        # Ignore folder input section
+        ignore_input_section = ttk.Frame(ignore_card)
+        ignore_input_section.pack(fill=tk.X, pady=(0, 15))
         
-        ttk.Label(ignore_input_frame, text="Folder name:").pack(side=tk.LEFT)
-        self.ignore_entry = ttk.Entry(ignore_input_frame, width=30)
-        self.ignore_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        ttk.Label(ignore_input_section, text="Add folder to ignore:", style='Section.TLabel').pack(anchor=tk.W)
+        
+        ignore_input_frame = ttk.Frame(ignore_input_section)
+        ignore_input_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        self.ignore_entry = ttk.Entry(ignore_input_frame, style='Modern.TEntry')
+        self.ignore_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 10))
         self.ignore_entry.bind('<Return>', lambda e: self.add_ignore_folder())
         
-        add_ignore_btn = ttk.Button(ignore_input_frame, text="Add", command=self.add_ignore_folder)
-        add_ignore_btn.pack(side=tk.LEFT, padx=2)
+        add_ignore_btn = ttk.Button(ignore_input_frame, text="Add", 
+                                   command=self.add_ignore_folder, style='Secondary.TButton')
+        add_ignore_btn.pack(side=tk.RIGHT)
         
-        # Ignore folders list
-        list_frame = ttk.Frame(ignore_frame)
-        list_frame.pack(fill=tk.BOTH, expand=True)
+        # Ignore folders list section
+        list_section = ttk.Frame(ignore_card)
+        list_section.pack(fill=tk.BOTH, expand=True)
+        
+        ttk.Label(list_section, text="Ignored folders:", style='Section.TLabel').pack(anchor=tk.W, pady=(0, 5))
         
         # Listbox with scrollbar
-        listbox_frame = ttk.Frame(list_frame)
-        listbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        listbox_container = ttk.Frame(list_section)
+        listbox_container.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
-        self.ignore_listbox = tk.Listbox(listbox_frame, height=3, selectmode=tk.SINGLE)
-        ignore_scrollbar = ttk.Scrollbar(listbox_frame, orient=tk.VERTICAL, command=self.ignore_listbox.yview)
+        self.ignore_listbox = tk.Listbox(listbox_container, height=4, selectmode=tk.SINGLE,
+                                        bg='#ffffff', fg='#2c3e50',
+                                        selectbackground='#3498db', selectforeground='white',
+                                        relief='solid', borderwidth=1)
+        ignore_scrollbar = ttk.Scrollbar(listbox_container, orient=tk.VERTICAL, command=self.ignore_listbox.yview)
         self.ignore_listbox.config(yscrollcommand=ignore_scrollbar.set)
         
         self.ignore_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         ignore_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Remove button
-        remove_ignore_btn = ttk.Button(list_frame, text="Remove", command=self.remove_ignore_folder)
-        remove_ignore_btn.pack(side=tk.LEFT, padx=(5, 0))
+        # Action buttons
+        action_buttons_frame = ttk.Frame(list_section)
+        action_buttons_frame.pack(fill=tk.X)
         
-        # Clear all button
-        clear_ignore_btn = ttk.Button(list_frame, text="Clear All", command=self.clear_ignore_folders)
-        clear_ignore_btn.pack(side=tk.LEFT, padx=2)
+        remove_ignore_btn = ttk.Button(action_buttons_frame, text="Remove", 
+                                      command=self.remove_ignore_folder, style='Secondary.TButton')
+        remove_ignore_btn.pack(side=tk.LEFT, padx=(0, 8))
         
-        # Load defaults button
-        load_defaults_btn = ttk.Button(list_frame, text="Load Defaults", command=self.load_default_ignore_patterns)
-        load_defaults_btn.pack(side=tk.LEFT, padx=2)
+        clear_ignore_btn = ttk.Button(action_buttons_frame, text="Clear All", 
+                                     command=self.clear_ignore_folders, style='Danger.TButton')
+        clear_ignore_btn.pack(side=tk.LEFT, padx=(0, 8))
+        
+        load_defaults_btn = ttk.Button(action_buttons_frame, text="Load Defaults", 
+                                      command=self.load_default_ignore_patterns, style='Secondary.TButton')
+        load_defaults_btn.pack(side=tk.LEFT)
         
         # Load default ignore patterns into listbox
         for pattern in sorted(self.ignored_folders):
             self.ignore_listbox.insert(tk.END, pattern)
         
-        # Progress frame
-        self.progress_frame = ttk.Frame(main_frame)
-        self.progress_frame.pack(fill=tk.X, pady=(0, 5))
+        # Progress section
+        progress_card = ttk.LabelFrame(main_container, text="Progress", 
+                                      style='Card.TLabelframe', padding=15)
+        progress_card.pack(fill=tk.X, pady=(0, 15))
         
         self.progress_var = tk.StringVar(value="Ready")
-        self.progress_label = ttk.Label(self.progress_frame, textvariable=self.progress_var)
-        self.progress_label.pack(side=tk.LEFT)
+        self.progress_label = ttk.Label(progress_card, textvariable=self.progress_var, 
+                                       style='Section.TLabel')
+        self.progress_label.pack(anchor=tk.W, pady=(0, 8))
         
-        self.progress_bar = ttk.Progressbar(self.progress_frame, mode='indeterminate')
-        self.progress_bar.pack(side=tk.RIGHT, fill=tk.X, expand=True, padx=(10, 0))
+        self.progress_bar = ttk.Progressbar(progress_card, mode='indeterminate', 
+                                           style='Modern.Horizontal.TProgressbar')
+        self.progress_bar.pack(fill=tk.X)
         
-        # Results text area
-        text_frame = ttk.LabelFrame(main_frame, text="Directory Tree", padding=5)
-        text_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        # Results section
+        results_card = ttk.LabelFrame(main_container, text="Directory Tree", 
+                                     style='Card.TLabelframe', padding=15)
+        results_card.pack(fill=tk.BOTH, expand=True, pady=(0, 15))
+        
+        # Text area with custom styling
+        text_container = ttk.Frame(results_card)
+        text_container.pack(fill=tk.BOTH, expand=True)
         
         self.text_area = scrolledtext.ScrolledText(
-            text_frame, 
+            text_container, 
             wrap=tk.NONE,
-            font=("Consolas", 9),
-            bg="#f8f8f8",
-            fg="#333333"
+            font=("Courier", 9),
+            bg="#ffffff",
+            fg="#2c3e50",
+            relief="solid",
+            borderwidth=1,
+            selectbackground="#3498db",
+            selectforeground="white",
+            insertbackground="#2c3e50"
         )
         self.text_area.pack(fill=tk.BOTH, expand=True)
         
-        # Horizontal scrollbar
-        x_scroll = ttk.Scrollbar(text_frame, orient=tk.HORIZONTAL, command=self.text_area.xview)
-        x_scroll.pack(fill=tk.X)
-        self.text_area.config(xscrollcommand=x_scroll.set)
-        
-        # Bottom frame with copy button and stats
-        bottom_frame = ttk.Frame(main_frame)
-        bottom_frame.pack(fill=tk.X)
+        # Bottom section with stats and copy button
+        bottom_section = ttk.Frame(main_container)
+        bottom_section.pack(fill=tk.X)
         
         self.stats_var = tk.StringVar(value="")
-        self.stats_label = ttk.Label(bottom_frame, textvariable=self.stats_var)
+        self.stats_label = ttk.Label(bottom_section, textvariable=self.stats_var, 
+                                    font=('TkDefaultFont', 9), foreground='#7f8c8d')
         self.stats_label.pack(side=tk.LEFT)
         
-        copy_btn = ttk.Button(bottom_frame, text="Copy Results", command=self.copy_results)
+        copy_btn = ttk.Button(bottom_section, text="Copy Results", 
+                             command=self.copy_results, style='Primary.TButton')
         copy_btn.pack(side=tk.RIGHT)
     
     def browse_directory(self) -> None:
