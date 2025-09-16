@@ -33,7 +33,39 @@ class DirectoryTreeApp:
         self.queue = queue.Queue()
         self.items_processed = 0
         
+        # Folder ignore functionality
+        self.ignored_folders = set()
+        self.load_default_ignore_patterns()
+        
         self.setup_ui()
+    
+    def load_default_ignore_patterns(self) -> None:
+        """Load common ignore patterns."""
+        common_patterns = [
+            '__pycache__',
+            '.git',
+            '.svn',
+            'node_modules',
+            '.vscode',
+            '.idea',
+            'venv',
+            'env',
+            '.env',
+            'build',
+            'dist',
+            'target',
+            '.DS_Store',
+            'Thumbs.db'
+        ]
+        self.ignored_folders.update(common_patterns)
+        
+        # Update UI if it exists
+        if hasattr(self, 'ignore_listbox'):
+            self.ignore_listbox.delete(0, tk.END)
+            for pattern in sorted(self.ignored_folders):
+                self.ignore_listbox.insert(tk.END, pattern)
+            self.progress_var.set("Loaded default ignore patterns")
+            self.root.after(2000, lambda: self.progress_var.set("Ready"))
         
     def setup_ui(self) -> None:
         """Set up the user interface."""
@@ -85,6 +117,53 @@ class DirectoryTreeApp:
         
         clear_btn = ttk.Button(btn_frame, text="Clear", command=self.clear_results)
         clear_btn.pack(side=tk.LEFT, padx=2)
+        
+        # Ignore folders frame
+        ignore_frame = ttk.LabelFrame(main_frame, text="Ignore Folders", padding=5)
+        ignore_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Ignore folder input
+        ignore_input_frame = ttk.Frame(ignore_frame)
+        ignore_input_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        ttk.Label(ignore_input_frame, text="Folder name:").pack(side=tk.LEFT)
+        self.ignore_entry = ttk.Entry(ignore_input_frame, width=30)
+        self.ignore_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
+        self.ignore_entry.bind('<Return>', lambda e: self.add_ignore_folder())
+        
+        add_ignore_btn = ttk.Button(ignore_input_frame, text="Add", command=self.add_ignore_folder)
+        add_ignore_btn.pack(side=tk.LEFT, padx=2)
+        
+        # Ignore folders list
+        list_frame = ttk.Frame(ignore_frame)
+        list_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Listbox with scrollbar
+        listbox_frame = ttk.Frame(list_frame)
+        listbox_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        self.ignore_listbox = tk.Listbox(listbox_frame, height=3, selectmode=tk.SINGLE)
+        ignore_scrollbar = ttk.Scrollbar(listbox_frame, orient=tk.VERTICAL, command=self.ignore_listbox.yview)
+        self.ignore_listbox.config(yscrollcommand=ignore_scrollbar.set)
+        
+        self.ignore_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        ignore_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Remove button
+        remove_ignore_btn = ttk.Button(list_frame, text="Remove", command=self.remove_ignore_folder)
+        remove_ignore_btn.pack(side=tk.LEFT, padx=(5, 0))
+        
+        # Clear all button
+        clear_ignore_btn = ttk.Button(list_frame, text="Clear All", command=self.clear_ignore_folders)
+        clear_ignore_btn.pack(side=tk.LEFT, padx=2)
+        
+        # Load defaults button
+        load_defaults_btn = ttk.Button(list_frame, text="Load Defaults", command=self.load_default_ignore_patterns)
+        load_defaults_btn.pack(side=tk.LEFT, padx=2)
+        
+        # Load default ignore patterns into listbox
+        for pattern in sorted(self.ignored_folders):
+            self.ignore_listbox.insert(tk.END, pattern)
         
         # Progress frame
         self.progress_frame = ttk.Frame(main_frame)
@@ -139,6 +218,38 @@ class DirectoryTreeApp:
         self.stats_var.set("")
         self.progress_var.set("Ready")
     
+    def add_ignore_folder(self) -> None:
+        """Add a folder to the ignore list."""
+        folder_name = self.ignore_entry.get().strip()
+        if folder_name:
+            if folder_name not in self.ignored_folders:
+                self.ignored_folders.add(folder_name)
+                self.ignore_listbox.insert(tk.END, folder_name)
+                self.ignore_entry.delete(0, tk.END)
+                self.progress_var.set(f"Added '{folder_name}' to ignore list")
+                self.root.after(2000, lambda: self.progress_var.set("Ready"))
+            else:
+                self.progress_var.set(f"'{folder_name}' is already in ignore list")
+                self.root.after(2000, lambda: self.progress_var.set("Ready"))
+    
+    def remove_ignore_folder(self) -> None:
+        """Remove selected folder from ignore list."""
+        selection = self.ignore_listbox.curselection()
+        if selection:
+            index = selection[0]
+            folder_name = self.ignore_listbox.get(index)
+            self.ignored_folders.discard(folder_name)
+            self.ignore_listbox.delete(index)
+            self.progress_var.set(f"Removed '{folder_name}' from ignore list")
+            self.root.after(2000, lambda: self.progress_var.set("Ready"))
+    
+    def clear_ignore_folders(self) -> None:
+        """Clear all ignored folders."""
+        self.ignored_folders.clear()
+        self.ignore_listbox.delete(0, tk.END)
+        self.progress_var.set("Cleared all ignored folders")
+        self.root.after(2000, lambda: self.progress_var.set("Ready"))
+    
     def toggle_search(self) -> None:
         """Toggle search operation (start/stop)."""
         if self.search_thread and self.search_thread.is_alive():
@@ -176,7 +287,7 @@ class DirectoryTreeApp:
         # Start search thread
         self.search_thread = threading.Thread(
             target=self.search_directory,
-            args=(start_dir, max_depth, show_option),
+            args=(start_dir, max_depth, show_option, self.ignored_folders),
             daemon=True
         )
         self.search_thread.start()
@@ -185,7 +296,7 @@ class DirectoryTreeApp:
         self.progress_var.set("Scanning directory...")
         self.monitor_search()
     
-    def search_directory(self, start_dir: str, max_depth: int, show_option: str) -> None:
+    def search_directory(self, start_dir: str, max_depth: int, show_option: str, ignored_folders: set) -> None:
         """Search directory and build tree structure."""
         try:
             if not os.path.isdir(start_dir):
@@ -204,7 +315,21 @@ class DirectoryTreeApp:
                 if max_depth >= 0 and depth > max_depth:
                     continue
                 
-                all_paths.append((root, depth, sorted(dirs), sorted(files)))
+                # Filter out ignored folders
+                filtered_dirs = []
+                dirs_to_remove = []
+                for dir_name in dirs:
+                    if dir_name not in ignored_folders:
+                        filtered_dirs.append(dir_name)
+                    else:
+                        # Mark for removal from os.walk traversal
+                        dirs_to_remove.append(dir_name)
+                
+                # Remove ignored directories from os.walk traversal
+                for dir_name in dirs_to_remove:
+                    dirs.remove(dir_name)
+                
+                all_paths.append((root, depth, sorted(filtered_dirs), sorted(files)))
             
             # Build tree structure
             self.queue.put(f"{os.path.basename(start_dir)}/")
