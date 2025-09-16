@@ -89,6 +89,7 @@ class DirectoryTreeApp:
         
         # UI state
         self.options_expanded = False
+        self.ignore_hidden = tk.BooleanVar(value=True)  # Default to ignore hidden files
         
         self.setup_ui()
     
@@ -203,6 +204,14 @@ class DirectoryTreeApp:
         ttk.Radiobutton(radio_frame, text="Both", variable=self.show_option, value="both").pack(side=tk.LEFT, padx=(0, 8))
         ttk.Radiobutton(radio_frame, text="Folders", variable=self.show_option, value="folders").pack(side=tk.LEFT, padx=(0, 8))
         ttk.Radiobutton(radio_frame, text="Files", variable=self.show_option, value="files").pack(side=tk.LEFT)
+        
+        # Hidden files option
+        hidden_frame = ttk.Frame(options_row)
+        hidden_frame.pack(side=tk.LEFT, padx=(0, 20))
+        
+        ttk.Checkbutton(hidden_frame, text="Ignore Hidden", 
+                       variable=self.ignore_hidden, 
+                       style='Secondary.TCheckbutton').pack(side=tk.LEFT)
         
         # Ignore folders (compact)
         ignore_frame = ttk.Frame(options_row)
@@ -386,7 +395,7 @@ class DirectoryTreeApp:
         # Start search thread
         self.search_thread = threading.Thread(
             target=self.search_directory,
-            args=(start_dir, max_depth, show_option, self.ignored_folders),
+            args=(start_dir, max_depth, show_option, self.ignored_folders, self.ignore_hidden.get()),
             daemon=True
         )
         self.search_thread.start()
@@ -395,7 +404,7 @@ class DirectoryTreeApp:
         self.progress_var.set("Scanning directory...")
         self.monitor_search()
     
-    def search_directory(self, start_dir: str, max_depth: int, show_option: str, ignored_folders: set) -> None:
+    def search_directory(self, start_dir: str, max_depth: int, show_option: str, ignored_folders: set, ignore_hidden: bool) -> None:
         """Search directory and build tree structure."""
         try:
             if not os.path.isdir(start_dir):
@@ -414,11 +423,21 @@ class DirectoryTreeApp:
                 if max_depth >= 0 and depth > max_depth:
                     continue
                 
-                # Filter out ignored folders
+                # Filter out ignored folders and hidden folders
                 filtered_dirs = []
                 dirs_to_remove = []
                 for dir_name in dirs:
-                    if dir_name not in ignored_folders:
+                    should_ignore = False
+                    
+                    # Check if folder is in ignore list
+                    if dir_name in ignored_folders:
+                        should_ignore = True
+                    
+                    # Check if folder is hidden (starts with dot)
+                    if ignore_hidden and dir_name.startswith('.'):
+                        should_ignore = True
+                    
+                    if not should_ignore:
                         filtered_dirs.append(dir_name)
                     else:
                         # Mark for removal from os.walk traversal
@@ -472,11 +491,23 @@ class DirectoryTreeApp:
                 
                 # Process files in this directory
                 if show_option in ["both", "files"]:
-                    for i, file_name in enumerate(files):
+                    # Filter files based on hidden files option
+                    filtered_files = []
+                    for file_name in files:
+                        should_ignore = False
+                        
+                        # Check if file is hidden (starts with dot)
+                        if ignore_hidden and file_name.startswith('.'):
+                            should_ignore = True
+                        
+                        if not should_ignore:
+                            filtered_files.append(file_name)
+                    
+                    for i, file_name in enumerate(filtered_files):
                         if self.stop_event.is_set():
                             break
                         
-                        is_last_file = (i == len(files) - 1) and show_option != "both"
+                        is_last_file = (i == len(filtered_files) - 1) and show_option != "both"
                         file_prefix = "└── " if is_last_file else "├── "
                         self.queue.put(f"{prefix}{file_prefix}{file_name}")
                         self.items_processed += 1
